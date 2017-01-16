@@ -139,10 +139,10 @@ fn kinetic_energy(bd : &Body) -> f64 {
 
 fn potential_energy(pair : (&Body, &Body)) -> f64 {
     let (a, b) = pair;
-    let mut dx : [f64; 3] = [0.0, 0.0, 0.0];
-    for (i, x_i) in dx.iter_mut().enumerate() {
-        *x_i = a.x[i] - b.x[i];
-    }
+    let dx : Vec<f64> = {
+        let over_x = a.x.iter().zip(b.x.iter());
+        over_x.map(|(a, b)| { a - b }).collect()
+    };
     let r = dx.iter().map(|xi| { xi.powi(2) }).sum::<f64>().sqrt();
     (- a.mass) * b.mass / r
 }
