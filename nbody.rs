@@ -112,12 +112,9 @@ struct Body {
     mass : f64,
 }
 
-fn mom(bd : &Body) -> [f64; 3] {
-    let mut p : [f64; 3] = [0.0, 0.0, 0.0];
-    for (i, p_i) in p.iter_mut().enumerate() {
-        *p_i = bd.v[i] * bd.mass;
-    };
-    p
+fn mom(body : &Body) -> Vec<f64> {
+    let mass = body.mass;
+    body.v.iter().map(|vi| { vi * mass }).collect()
 }
 
 fn sol(bds : &[Body]) -> Body {
