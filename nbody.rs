@@ -3,6 +3,50 @@ const SOLAR_MASS : f64 = 4.0 * PI * PI;
 const DAYS_PER_YEAR : f64 = 365.24;
 const TIME_RESOLUTION : f64 = 0.01;
 
+struct Pairs<'a, T> where T : 'a {
+    slice : &'a [T],
+    i : usize,
+    j : usize,
+}
+
+fn pairs<'a, T>(slice : &'a [T]) -> Pairs<'a, T> {
+    Pairs {
+        slice : slice,
+        i : 0,
+        j : 1,
+    }
+}
+
+impl<'a, T> Iterator for Pairs<'a, T> {
+    type Item = (&'a T, &'a T);
+    fn next(&mut self) -> Option<(&'a T, &'a T)> {
+        let slice : &'a [T] = self.slice;
+        let len : usize = slice.len();
+        let i : usize = self.i;
+        let j : usize = self.j;
+        if j < len {
+            self.j = j + 1;
+            unsafe {
+                Some((slice.get_unchecked(i), slice.get_unchecked(j)))
+            }
+        }
+        else {
+            let i : usize = i + 1;
+            self.i = i;
+            let j : usize = i + 1;
+            if j < len {
+                self.j = j + 1;
+                unsafe {
+                    Some((slice.get_unchecked(i), slice.get_unchecked(j)))
+                }
+            }
+            else {
+                None
+            }
+        }
+    }
+}
+
 #[derive(Default)]
 struct Body {
     x : [f64; 3],
@@ -36,7 +80,8 @@ fn kinetic_energy(bd : &Body) -> f64 {
     bd.v.iter().map(|vi| { vi.powi(2) }).sum::<f64>() * bd.mass / 2.0
 }
 
-fn potential_energy(a : &Body, b : &Body) -> f64 {
+fn potential_energy(pair : (&Body, &Body)) -> f64 {
+    let (a, b) = pair;
     let mut dx : [f64; 3] = [0.0, 0.0, 0.0];
     for (i, x_i) in dx.iter_mut().enumerate() {
         *x_i = a.x[i] - b.x[i];
@@ -45,15 +90,9 @@ fn potential_energy(a : &Body, b : &Body) -> f64 {
     (- a.mass) * b.mass / r
 }
 
-fn energy(bds : &[Body]) -> f64 {
-    let ke = bds.iter().map(kinetic_energy).sum::<f64>();
-    let mut pe = 0.0;
-    let len = bds.len();
-    for i in 0..len {
-        for j in (i + 1)..len {
-            pe += potential_energy(&bds[i], &bds[j]);
-        }
-    };
+fn energy(bodies : &[Body]) -> f64 {
+    let ke = bodies.iter().map(kinetic_energy).sum::<f64>();
+    let pe = pairs(bodies).map(potential_energy).sum::<f64>();
     ke + pe
 }
 
