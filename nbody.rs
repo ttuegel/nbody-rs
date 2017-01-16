@@ -1,3 +1,5 @@
+use std::marker;
+
 const PI : f64 = 3.141592653589793;
 const SOLAR_MASS : f64 = 4.0 * PI * PI;
 const DAYS_PER_YEAR : f64 = 365.24;
@@ -41,6 +43,56 @@ impl<'a, T> Iterator for Pairs<'a, T> {
                 }
             }
             else {
+                None
+            }
+        }
+    }
+}
+
+struct PairsMut<'a, T> where T : 'a {
+    ptr_a : *mut T,
+    ptr_b : *mut T,
+    end : *mut T,
+    _marker : marker::PhantomData<&'a mut [T]>,
+}
+
+fn pairs_mut<'a, T>(slice : &'a mut [T]) -> PairsMut<'a, T> {
+    let ptr_a : *mut T = slice.as_mut_ptr();
+    let ptr_b : *mut T = unsafe { ptr_a.offset(1) };
+    let end : *mut T = unsafe { ptr_a.offset(slice.len() as isize) };
+    PairsMut {
+        ptr_a : ptr_a,
+        ptr_b : ptr_b,
+        end : end,
+        _marker : marker::PhantomData,
+    }
+}
+
+impl<'a, T> Iterator for PairsMut<'a, T> {
+    type Item = (&'a mut T, &'a mut T);
+    fn next(&mut self) -> Option<(&'a mut T, &'a mut T)> {
+        let ptr_a = self.ptr_a;
+        let ptr_b = self.ptr_b;
+        let end = self.end;
+        if ptr_b < end {
+            unsafe {
+                let a = ptr_a.as_mut().unwrap();
+                let b = ptr_b.as_mut().unwrap();
+                self.ptr_b = ptr_b.offset(1);
+                Some((a, b))
+            }
+        } else {
+            let ptr_a = unsafe { ptr_a.offset(1) };
+            let ptr_b = unsafe { ptr_a.offset(1) };
+            if ptr_b < end {
+                unsafe {
+                    let a = ptr_a.as_mut().unwrap();
+                    let b = ptr_b.as_mut().unwrap();
+                    self.ptr_a = ptr_a;
+                    self.ptr_b = ptr_b.offset(1);
+                    Some((a, b))
+                }
+            } else {
                 None
             }
         }
@@ -105,32 +157,29 @@ fn move_bodies(bds : &mut [Body]) {
 }
 
 fn accelerate_bodies(bodies : &mut [Body]) {
-    let len = bodies.len();
-    for i in 0..len {
-        for j in (i + 1)..len {
-            // displacement between bodies
-            let mut x : [f64; 3] = [0.0, 0.0, 0.0];
-            // squared distance between bodies
-            let mut rr : f64 = 0.0;
+    for (a, b) in pairs_mut(bodies) {
+        // displacement between bodies
+        let mut x : [f64; 3] = [0.0, 0.0, 0.0];
+        // squared distance between bodies
+        let mut rr : f64 = 0.0;
 
-            for l in 0..3 {
-                let t = bodies[i].x[l] - bodies[j].x[l];
-                x[l] = t;
-                rr += t * t;
-            }
+        for l in 0..3 {
+            let t = a.x[l] - b.x[l];
+            x[l] = t;
+            rr += t * t;
+        }
 
-            let r = rr.sqrt();
-            let dmag = TIME_RESOLUTION / (rr * r);
+        let r = rr.sqrt();
+        let dmag = TIME_RESOLUTION / (rr * r);
 
-            // accelerate (update the velocity of) the body at i
-            for (v_i, x_i) in bodies[i].v.iter_mut().zip(x.iter()) {
-                *v_i -= x_i * bodies[j].mass * dmag;
-            }
+        // accelerate (update the velocity of) the body at i
+        for (v_i, x_i) in a.v.iter_mut().zip(x.iter()) {
+            *v_i -= x_i * b.mass * dmag;
+        }
 
-            // accelerate (update the velocity of) the body at j
-            for (v_i, x_i) in bodies[j].v.iter_mut().zip(x.iter()) {
-                *v_i += x_i * bodies[i].mass * dmag;
-            }
+        // accelerate (update the velocity of) the body at j
+        for (v_i, x_i) in b.v.iter_mut().zip(x.iter()) {
+            *v_i += x_i * a.mass * dmag;
         }
     }
 }
