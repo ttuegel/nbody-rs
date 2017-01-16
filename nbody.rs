@@ -164,26 +164,33 @@ fn move_bodies(bds : &mut [Body]) {
 fn accelerate_bodies(bodies : &mut [Body]) {
     for (a, b) in pairs_mut(bodies) {
         // displacement between bodies
-        let mut x : [f64; 3] = [0.0, 0.0, 0.0];
-        // squared distance between bodies
-        let mut rr : f64 = 0.0;
+        let dx : [f64; 3] = {
+            let mut dx : [f64; 3] = [0.0, 0.0, 0.0];
+            let ax = a.x;
+            let bx = b.x;
+            // I solemnly swear that I am up to no good.
+            unsafe {
+                for i in 0..3usize {
+                    *dx.get_unchecked_mut(i) =
+                        ax.get_unchecked(i) - bx.get_unchecked(i);
+                };
+            };
+            dx
+        };
 
-        for l in 0..3 {
-            let t = a.x[l] - b.x[l];
-            x[l] = t;
-            rr += t * t;
-        }
+        // squared distance between bodies
+        let rr = dx.iter().map(|xi| { xi.powi(2) }).sum::<f64>();
 
         let r = rr.sqrt();
         let dmag = TIME_RESOLUTION / (rr * r);
 
         // accelerate (update the velocity of) the body at i
-        for (v_i, x_i) in a.v.iter_mut().zip(x.iter()) {
+        for (v_i, x_i) in a.v.iter_mut().zip(dx.iter()) {
             *v_i -= x_i * b.mass * dmag;
         }
 
         // accelerate (update the velocity of) the body at j
-        for (v_i, x_i) in b.v.iter_mut().zip(x.iter()) {
+        for (v_i, x_i) in b.v.iter_mut().zip(dx.iter()) {
             *v_i += x_i * a.mass * dmag;
         }
     }
