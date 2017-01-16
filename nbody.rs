@@ -117,14 +117,17 @@ fn mom(body : &Body) -> Vec<f64> {
     body.v.iter().map(|vi| { vi * mass }).collect()
 }
 
-fn sol(bds : &[Body]) -> Body {
-    let mut v : [f64; 3] = [0.0, 0.0, 0.0];
-    for (i, v_i) in v.iter_mut().enumerate() {
-        *v_i = - bds.iter().map(|bd| { mom(bd)[i] }).sum::<f64>() / SOLAR_MASS;
-    }
+fn sol(bodies : &[Body]) -> Body {
     Body {
         x : [0.0, 0.0, 0.0],
-        v : v,
+        v : {
+            let mut v : [f64; 3] = [0.0, 0.0, 0.0];
+            for (i, v_i) in v.iter_mut().enumerate() {
+                *v_i = - bodies.iter().map(|bd| { mom(bd)[i] }).sum::<f64>()
+                    / SOLAR_MASS;
+            };
+            v
+        },
         mass : SOLAR_MASS,
         .. Default::default()
     }
