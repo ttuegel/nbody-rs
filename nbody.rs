@@ -6,43 +6,48 @@ const DAYS_PER_YEAR : f64 = 365.24;
 const TIME_RESOLUTION : f64 = 0.01;
 
 struct Pairs<'a, T> where T : 'a {
-    slice : &'a [T],
-    i : usize,
-    j : usize,
+    ptr_a : *const T,
+    ptr_b : *const T,
+    end : *const T,
+    _marker : marker::PhantomData<&'a [T]>,
 }
 
 fn pairs<'a, T>(slice : &'a [T]) -> Pairs<'a, T> {
+    let ptr_a = slice.as_ptr();
+    let ptr_b = unsafe { ptr_a.offset(1) };
+    let end = unsafe { ptr_a.offset(slice.len() as isize) };
     Pairs {
-        slice : slice,
-        i : 0,
-        j : 1,
+        ptr_a : ptr_a,
+        ptr_b : ptr_b,
+        end : end,
+        _marker : marker::PhantomData,
     }
 }
 
 impl<'a, T> Iterator for Pairs<'a, T> {
     type Item = (&'a T, &'a T);
     fn next(&mut self) -> Option<(&'a T, &'a T)> {
-        let slice : &'a [T] = self.slice;
-        let len : usize = slice.len();
-        let i : usize = self.i;
-        let j : usize = self.j;
-        if j < len {
-            self.j = j + 1;
+        let ptr_a = self.ptr_a;
+        let ptr_b = self.ptr_b;
+        if ptr_b < self.end {
             unsafe {
-                Some((slice.get_unchecked(i), slice.get_unchecked(j)))
+                let a = ptr_a.as_ref().unwrap();
+                let b = ptr_b.as_ref().unwrap();
+                self.ptr_b = ptr_b.offset(1);
+                Some((a, b))
             }
-        }
-        else {
-            let i : usize = i + 1;
-            self.i = i;
-            let j : usize = i + 1;
-            if j < len {
-                self.j = j + 1;
+        } else {
+            let ptr_a = unsafe { ptr_a.offset(1) };
+            let ptr_b = unsafe { ptr_a.offset(1) };
+            if ptr_b < self.end {
                 unsafe {
-                    Some((slice.get_unchecked(i), slice.get_unchecked(j)))
+                    let a = ptr_a.as_ref().unwrap();
+                    let b = ptr_b.as_ref().unwrap();
+                    self.ptr_a = ptr_a;
+                    self.ptr_b = ptr_b.offset(1);
+                    Some((a, b))
                 }
-            }
-            else {
+            } else {
                 None
             }
         }
