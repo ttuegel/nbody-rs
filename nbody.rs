@@ -107,7 +107,6 @@ impl<'a, T> Iterator for PairsMut<'a, T> {
 #[derive(Default)]
 struct Body {
     x : [f64; 3],
-    #[allow(dead_code)] fill : f64, // alignment tweak
     v : [f64; 3],
     mass : f64,
 }
@@ -129,7 +128,6 @@ fn sol(bodies : &[Body]) -> Body {
             v
         },
         mass : SOLAR_MASS,
-        .. Default::default()
     }
 }
 
@@ -217,7 +215,6 @@ fn main() {
             -6.90460016972063023e-05 * DAYS_PER_YEAR
         ],
         mass : 9.54791938424326609e-04 * SOLAR_MASS,
-        .. Default::default()
     };
 
     let saturn : Body = Body {
@@ -232,7 +229,6 @@ fn main() {
             2.30417297573763929e-05 * DAYS_PER_YEAR
         ],
         mass : 2.85885980666130812e-04 * SOLAR_MASS,
-        .. Default::default()
     };
 
     let uranus : Body = Body {
@@ -247,7 +243,6 @@ fn main() {
             -2.96589568540237556e-05 * DAYS_PER_YEAR
         ],
         mass : 4.36624404335156298e-05 * SOLAR_MASS,
-        .. Default::default()
     };
 
     let neptune : Body = Body {
@@ -262,7 +257,6 @@ fn main() {
             -9.51592254519715870e-05 * DAYS_PER_YEAR
         ],
         mass : 5.15138902046611451e-05 * SOLAR_MASS,
-        .. Default::default()
     };
 
     let mut bodies : [Body; 5] = [
