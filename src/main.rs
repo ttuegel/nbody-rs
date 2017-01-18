@@ -188,20 +188,17 @@ fn accelerate_bodies(bodies : &mut [Body]) {
     }
 
     for (i, (a, b)) in pairs_mut(bodies).enumerate() {
-        let masses = f64x2::new(a.mass, b.mass);
+        let masses = f64x2::new(b.mass, a.mass);
         let f = f64x2::splat(fs[i]);
         let forces = masses * f;
-        let f_a = forces.extract(0);
-        let f_b = forces.extract(1);
 
-        // accelerate (update the velocity of) the first body
-        for (v_i, x_i) in a.v.iter_mut().zip(dxs[i].iter()) {
-            *v_i -= x_i * f_a;
-        }
-
-        // accelerate (update the velocity of) the second body
-        for (v_i, x_i) in b.v.iter_mut().zip(dxs[i].iter()) {
-            *v_i += x_i * f_b;
+        let dir = f64x2::new(-1.0, 1.0);
+        for j in 0..3usize {
+            let v0 = f64x2::new(a.v[j], b.v[j]);
+            let dv = f64x2::splat(dxs[i][j]) * dir * forces;
+            let v1 = v0 + dv;
+            a.v[j] = v1.extract(0);
+            b.v[j] = v1.extract(1);
         }
     }
 }
