@@ -1,0 +1,11 @@
+[package]
+name = "nbody-rs"
+version = "0.1.0"
+authors = [ "Thomas Tuegel <ttuegel@gmail.com>" ]
+
+[[bin]]
+name = "nbody"
+path = "src/main.rs"
+
+[dependencies]
+simd = { git = "https://github.com/huonw/simd" }

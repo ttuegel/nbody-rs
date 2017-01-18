@@ -1,0 +1,14 @@
+[root]
+name = "nbody-rs"
+version = "0.1.0"
+dependencies = [
+ "simd 0.1.1 (git+https://github.com/huonw/simd)",
+]
+
+[[package]]
+name = "simd"
+version = "0.1.1"
+source = "git+https://github.com/huonw/simd#0d85d25d5cc3788062b252e31ad48dd19e805e90"
+
+[metadata]
+"checksum simd 0.1.1 (git+https://github.com/huonw/simd)" = "<none>"
