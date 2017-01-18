@@ -159,43 +159,38 @@ fn move_bodies(bds : &mut [Body]) {
     }
 }
 
+const N : usize = 5;
+const NPAIRS : usize = N * (N - 1) / 2;
+const NPAD : usize = NPAIRS + 1;
+
 fn accelerate_bodies(bodies : &mut [Body]) {
-    for (a, b) in pairs_mut(bodies) {
-        let a_x = a.x;
-        let a_v = &mut a.v;
-        let a_mass = a.mass;
-        let b_x = b.x;
-        let b_v = &mut b.v;
-        let b_mass = b.mass;
+    let mut dxs : [[f64; 3]; NPAD] = [[0.0; 3]; NPAD];
+    let mut fs : [f64; NPAD] = [0.0; NPAD];
 
-        // displacement between bodies
-        let dx : [f64; 3] = {
-            let mut dx : [f64; 3] = [0.0, 0.0, 0.0];
-            // I solemnly swear that I am up to no good.
-            unsafe {
-                for i in 0..3usize {
-                    *dx.get_unchecked_mut(i) =
-                        a_x.get_unchecked(i) - b_x.get_unchecked(i);
-                };
-            };
-            dx
-        };
+    for (i, (a, b)) in pairs(bodies).enumerate() {
+        for j in 0..3usize {
+            dxs[i][j] = a.x[j] - b.x[j];
+        }
+    }
 
-        // squared distance between bodies
-        let rr = dx.iter().map(|xi| { xi.powi(2) }).sum::<f64>();
-
+    for i in 0..NPAD {
+        let rr = dxs[i].iter().map(|x_i| { x_i.powi(2) }).sum::<f64>();
         let r = rr.sqrt();
-        let mag = TIME_RESOLUTION / (rr * r);
-        let mag_a = b_mass * mag;
-        let mag_b = a_mass * mag;
+        fs[i] = TIME_RESOLUTION / (rr * r);
+    }
 
-        // accelerate (update the velocity of) the body at i
-        for (v_i, x_i) in a_v.iter_mut().zip(dx.iter()) {
+    for (i, (a, b)) in pairs_mut(bodies).enumerate() {
+        let f = fs[i];
+        let mag_a = b.mass * f;
+        let mag_b = a.mass * f;
+
+        // accelerate (update the velocity of) the first body
+        for (v_i, x_i) in a.v.iter_mut().zip(dxs[i].iter()) {
             *v_i -= x_i * mag_a;
         }
 
-        // accelerate (update the velocity of) the body at j
-        for (v_i, x_i) in b_v.iter_mut().zip(dx.iter()) {
+        // accelerate (update the velocity of) the second body
+        for (v_i, x_i) in b.v.iter_mut().zip(dxs[i].iter()) {
             *v_i += x_i * mag_b;
         }
     }
@@ -259,7 +254,7 @@ fn main() {
         mass : 5.15138902046611451e-05 * SOLAR_MASS,
     };
 
-    let mut bodies : [Body; 5] = [
+    let mut bodies : [Body; N] = [
         Default::default(),
         jupiter,
         saturn,
