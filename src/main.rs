@@ -1,4 +1,7 @@
+extern crate simd;
+
 use std::marker;
+use simd::x86::sse2::*;
 
 const PI : f64 = 3.141592653589793;
 const SOLAR_MASS : f64 = 4.0 * PI * PI;
@@ -174,9 +177,14 @@ fn accelerate_bodies(bodies : &mut [Body]) {
     }
 
     for i in 0..NPAD {
-        let rr = dxs[i].iter().map(|x_i| { x_i.powi(2) }).sum::<f64>();
+        fs[i] = dxs[i].iter().map(|x_i| { x_i.powi(2) }).sum::<f64>();
+    }
+
+    let dt = f64x2::splat(TIME_RESOLUTION);
+    for i in 0..(NPAD / 2) {
+        let rr = f64x2::load(&fs, 2 * i);
         let r = rr.sqrt();
-        fs[i] = TIME_RESOLUTION / (rr * r);
+        (dt / (rr * r)).store(&mut fs, 2 * i);
     }
 
     for (i, (a, b)) in pairs_mut(bodies).enumerate() {
