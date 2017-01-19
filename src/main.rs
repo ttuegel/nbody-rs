@@ -110,8 +110,8 @@ impl<'a, T> Iterator for PairsMut<'a, T> {
 
 #[derive(Default)]
 struct Body {
-    x : [f64; 3],
-    v : [f64; 3],
+    x : [f64; 4],
+    v : [f64; 4],
     mass : f64,
 }
 
@@ -122,9 +122,9 @@ fn mom(body : &Body) -> Vec<f64> {
 
 fn sol(bodies : &[Body]) -> Body {
     Body {
-        x : [0.0, 0.0, 0.0],
+        x : [0.0; 4],
         v : {
-            let mut v : [f64; 3] = [0.0, 0.0, 0.0];
+            let mut v : [f64; 4] = [0.0; 4];
             for (i, v_i) in v.iter_mut().enumerate() {
                 *v_i = - bodies.iter().map(|bd| { mom(bd)[i] }).sum::<f64>()
                     / SOLAR_MASS;
@@ -168,17 +168,33 @@ const NPAIRS : usize = N * (N - 1) / 2;
 const NPAD : usize = NPAIRS + 1;
 
 fn accelerate_bodies(bodies : &mut [Body]) {
-    let mut dxs : [[f64; 3]; NPAD] = [[0.0; 3]; NPAD];
+    let mut dxs : [[f64; 4]; NPAD] = [[0.0; 4]; NPAD];
     let mut fs : [f64; NPAD] = [0.0; NPAD];
 
     for (i, (a, b)) in pairs(bodies).enumerate() {
-        for j in 0..3usize {
-            dxs[i][j] = a.x[j] - b.x[j];
+        {
+            let a_x = f64x2::load(&a.x, 0);
+            let b_x = f64x2::load(&b.x, 0);
+            (a_x - b_x).store(&mut dxs[i], 0);
+        }
+        {
+            let a_x = f64x2::load(&a.x, 2);
+            let b_x = f64x2::load(&b.x, 2);
+            (a_x - b_x).store(&mut dxs[i], 2);
         }
     }
 
     for i in 0..NPAD {
-        fs[i] = dxs[i].iter().map(|x_i| { x_i.powi(2) }).sum::<f64>();
+        let mut xx : [f64; 4] = [0.0; 4];
+        {
+            let lo = f64x2::load(&dxs[i], 0);
+            (lo * lo).store(&mut xx, 0);
+        }
+        {
+            let hi = f64x2::load(&dxs[i], 2);
+            (hi * hi).store(&mut xx, 2);
+        }
+        fs[i] = xx.iter().sum::<f64>();
     }
 
     let dt = f64x2::splat(TIME_RESOLUTION);
@@ -189,14 +205,18 @@ fn accelerate_bodies(bodies : &mut [Body]) {
     }
 
     for (i, (a, b)) in pairs_mut(bodies).enumerate() {
-        let masses = f64x2::new(b.mass, a.mass);
-        let f = f64x2::splat(fs[i]);
-        let forces = masses * f;
+        let forces = {
+            let masses = f64x2::new(b.mass, a.mass);
+            let f = f64x2::splat(fs[i]);
+            masses * f
+        };
 
         for j in 0..3usize {
-            let v0 = f64x2::new(a.v[j], b.v[j]);
-            let dv = f64x2::splat(dxs[i][j]) * forces;
-            let v1 = v0.addsub(dv);
+            let v1 = {
+                let v0 = f64x2::new(a.v[j], b.v[j]);
+                let dv = f64x2::splat(dxs[i][j]) * forces;
+                v0.addsub(dv)
+            };
             a.v[j] = v1.extract(0);
             b.v[j] = v1.extract(1);
         }
@@ -209,12 +229,14 @@ fn main() {
         x : [
             4.84143144246472090e+00,
             -1.16032004402742839e+00,
-            -1.03622044471123109e-01
+            -1.03622044471123109e-01,
+            0.0
         ],
         v : [
             1.66007664274403694e-03 * DAYS_PER_YEAR,
             7.69901118419740425e-03 * DAYS_PER_YEAR,
-            -6.90460016972063023e-05 * DAYS_PER_YEAR
+            -6.90460016972063023e-05 * DAYS_PER_YEAR,
+            0.0
         ],
         mass : 9.54791938424326609e-04 * SOLAR_MASS,
     };
@@ -223,12 +245,14 @@ fn main() {
         x : [
             8.34336671824457987e+00,
             4.12479856412430479e+00,
-            -4.03523417114321381e-01
+            -4.03523417114321381e-01,
+            0.0
         ],
         v : [
             -2.76742510726862411e-03 * DAYS_PER_YEAR,
             4.99852801234917238e-03 * DAYS_PER_YEAR,
-            2.30417297573763929e-05 * DAYS_PER_YEAR
+            2.30417297573763929e-05 * DAYS_PER_YEAR,
+            0.0
         ],
         mass : 2.85885980666130812e-04 * SOLAR_MASS,
     };
@@ -237,12 +261,14 @@ fn main() {
         x : [
             1.28943695621391310e+01,
             -1.51111514016986312e+01,
-            -2.23307578892655734e-01
+            -2.23307578892655734e-01,
+            0.0
         ],
         v : [
             2.96460137564761618e-03 * DAYS_PER_YEAR,
             2.37847173959480950e-03 * DAYS_PER_YEAR,
-            -2.96589568540237556e-05 * DAYS_PER_YEAR
+            -2.96589568540237556e-05 * DAYS_PER_YEAR,
+            0.0
         ],
         mass : 4.36624404335156298e-05 * SOLAR_MASS,
     };
@@ -251,12 +277,14 @@ fn main() {
         x : [
             1.53796971148509165e+01,
             -2.59193146099879641e+01,
-            1.79258772950371181e-01
+            1.79258772950371181e-01,
+            0.0
         ],
         v : [
             2.68067772490389322e-03 * DAYS_PER_YEAR,
             1.62824170038242295e-03 * DAYS_PER_YEAR,
-            -9.51592254519715870e-05 * DAYS_PER_YEAR
+            -9.51592254519715870e-05 * DAYS_PER_YEAR,
+            0.0
         ],
         mass : 5.15138902046611451e-05 * SOLAR_MASS,
     };
