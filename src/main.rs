@@ -2,6 +2,7 @@ extern crate simd;
 
 use std::marker;
 use simd::x86::sse2::*;
+use simd::x86::sse3::*;
 
 const PI : f64 = 3.141592653589793;
 const SOLAR_MASS : f64 = 4.0 * PI * PI;
@@ -192,11 +193,10 @@ fn accelerate_bodies(bodies : &mut [Body]) {
         let f = f64x2::splat(fs[i]);
         let forces = masses * f;
 
-        let dir = f64x2::new(-1.0, 1.0);
         for j in 0..3usize {
             let v0 = f64x2::new(a.v[j], b.v[j]);
-            let dv = f64x2::splat(dxs[i][j]) * dir * forces;
-            let v1 = v0 + dv;
+            let dv = f64x2::splat(dxs[i][j]) * forces;
+            let v1 = v0.addsub(dv);
             a.v[j] = v1.extract(0);
             b.v[j] = v1.extract(1);
         }
